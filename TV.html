@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>탄탄 기후놀이터 실시간 안내</title>
+    <style>
+        * { box-sizing: border-box; font-family: 'Pretendard', sans-serif; margin: 0; padding: 0; }
+        body { background-color: #f8fafc; color: #1e293b; height: 100vh; display: flex; flex-direction: column; padding: 30px; overflow: hidden; }
+        
+        header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; border-bottom: 3px solid #e2e8f0; padding-bottom: 15px; }
+        .logo-area { display: flex; align-items: center; gap: 15px; }
+        .logo-badge { background-color: #38bdf8; color: white; padding: 6px 18px; border-radius: 30px; font-weight: 700; font-size: 1.4rem; box-shadow: 0 4px 10px rgba(56, 189, 248, 0.3); }
+        h1 { font-size: 2.5rem; color: #0f172a; font-weight: 800; }
+        .time-clock { font-size: 2rem; font-weight: 700; color: #64748b; background: #e2e8f0; padding: 8px 20px; border-radius: 14px; }
+
+        .main-layout { display: grid; grid-template-columns: 7fr 3fr; gap: 25px; flex: 1; overflow: hidden; }
+
+        .grid-container { display: grid; grid-template-columns: repeat(4, 1fr); grid-template-rows: repeat(2, 1fr); gap: 15px; }
+        .card { border: 2px solid #cbd5e1; border-radius: 18px; display: flex; flex-direction: column; justify-content: center; align-items: center; padding: 15px; box-shadow: 0 6px 15px rgba(0,0,0,0.03); position: relative; transition: all 0.3s; }
+        
+        .card-s0 { background-color: #ffe4e6; }
+        .card-s1 { background-color: #ffedd5; }
+        .card-s2 { background-color: #fef9c3; }
+        .card-break { background-color: #f1f5f9; border-style: dashed; opacity: 0.8; }
+        .card-s3 { background-color: #dcfce7; }
+        .card-s4 { background-color: #e0f2fe; }
+        .card-s5 { background-color: #ede9fe; }
+        .card-s6 { background-color: #fce7f3; }
+
+        .card.full { border-color: #f43f5e !important; background-color: #ffe4e6 !important; }
+        .card.ended { border-color: #cbd5e1 !important; background-color: #e2e8f0 !important; opacity: 0.75; }
+        .card.current { border: 4px solid #059669 !important; box-shadow: 0 0 25px rgba(5, 150, 105, 0.3); transform: scale(1.02); z-index: 2; }
+
+        .session-title { font-size: 1.6rem; font-weight: 700; margin-bottom: 2px; color: #334155; }
+        .session-time { font-size: 1rem; color: #64748b; margin-bottom: 10px; font-weight: 600; }
+        
+        .session-status { font-size: 2.4rem; font-weight: 900; color: #0284c7; line-height: 1.1; }
+        .session-status span { font-size: 1.5rem; color: #0284c7; font-weight: 700; }
+        .card.full .session-status { color: #e11d48; font-size: 2rem; }
+        .card.ended .session-status { color: #64748b; font-size: 2rem; }
+        .card.current .session-status { color: #047857; }
+
+        .badge { margin-top: 10px; font-size: 0.95rem; padding: 4px 14px; border-radius: 20px; font-weight: 700; background-color: rgba(255,255,255,0.7); color: #334155; }
+        .card.full .badge { background-color: #ffe4e6; color: #e11d48; }
+        .card.ended .badge { background-color: #cbd5e1; color: #475569; }
+        .card.current .badge { background-color: #059669; color: white; font-weight: 800; }
+
+        .notice-panel { background-color: #e2f2ff; border: 2px solid #bae6fd; border-radius: 24px; padding: 25px; color: #0369a1; display: flex; flex-direction: column; justify-content: space-between; box-shadow: 0 10px 25px rgba(0,0,0,0.03); position: relative; overflow: hidden; }
+        .notice-fixed-top { background-color: #0284c7; color: white; font-size: 1.35rem; font-weight: 800; padding: 14px 15px; border-radius: 12px; text-align: center; word-break: keep-all; box-shadow: 0 3px 10px rgba(2, 132, 199, 0.25); line-height: 1.4; }
+        .notice-body { flex: 1; display: flex; flex-direction: column; justify-content: center; gap: 20px; padding: 15px 0; transition: opacity 0.5s ease-in-out; }
+        .notice-title { font-size: 2.2rem; font-weight: 800; color: #0369a1; line-height: 1.2; }
+        .notice-desc { font-size: 1.6rem; line-height: 1.6; font-weight: 500; color: #1e293b; word-break: keep-all; }
+        .notice-footer { font-size: 1rem; opacity: 0.7; text-align: right; border-top: 1px solid #bae6fd; padding-top: 12px; color: #0369a1; font-weight: 600; }
+    </style>
+</head>
+<body>
+
+    <header>
+        <div class="logo-area">
+            <div class="logo-badge">탄탄</div>
+            <h1>기후놀이터 실시간 안내</h1>
+        </div>
+        <div class="time-clock" id="clock">00:00:00</div>
+    </header>
+
+    <div class="main-layout">
+        <div class="grid-container" id="dashboard"></div>
+
+        <div class="notice-panel">
+            <div class="notice-fixed-top">
+                현장 접수 시 안에 있는 근무자에게 문의해주세요
+            </div>
+
+            <div class="notice-body" id="notice-box"></div>
+
+            <div class="notice-footer">탄탄 기후놀이터</div>
+        </div>
+    </div>
+
+    <script>
+        const API_URL = 'https://script.google.com/macros/s/AKfycbzhq3t7ZYTT0kuyYC-l6ENiGe7AcP_f_aOIFf_r7f_ZrporZrTB53cZdNYFWrbABMSM/exec';
+
+        // 홈페이지 공지 내용을 바탕으로 다듬은 순환 공지 리스트
+        const notices = [
+            {
+                title: "노쇼 및 대기 안내",
+                desc: "사전 예약 후 해당 회차 <b>15분 이상 경과 시 노쇼 처리</b>되며, 현장에서 대기하시는 분들께 순서가 넘어갑니다.<br><br>잔여 자리는 시작 후 15분에 <b>선착순 입장</b>이 가능합니다."
+            },
+            {
+                title: "이용 대상 및 연령 확인",
+                desc: "1세~7세(2020년생~2026년생) 유아기후환경교육관입니다.<br><br>현장 접수 시 출생년도 확인을 위해 <b>똑닥, 등본, 키즈노트</b> 중 하나를 보여주세요!"
+            },
+            {
+                title: "보호자 동반 안내",
+                desc: "안전사고 예방과 관람 질서 유지를 위해 <b>보호자 동반은 필수</b>입니다.<br><br>유아 1명당 보호자는 <b>최대 2명</b>까지 입장 가능합니다."
+            },
+            {
+                title: "필수 주의사항",
+                desc: "안전과 위생을 위해 <b>양말 착용은 필수</b>입니다!<br><br>실내에서는 물을 제외한 음식물 섭취가 불가하오니 텀블러를 지참해 주세요."
+            },
+            {
+                title: "점심 및 정비 시간",
+                desc: "12:00부터 13:00까지는 시설 정비 및 점심 휴게 시간입니다.<br><br>1시에 밝은 모습으로 다시 만나요!"
+            }
+        ];
+
+        let currentNoticeIndex = 0;
+
+        function rotateNotice() {
+            const box = document.getElementById('notice-box');
+            if(!box) return;
+            box.style.opacity = 0;
+            setTimeout(() => {
+                const n = notices[currentNoticeIndex];
+                box.innerHTML = `
+                    <div class="notice-title">${n.title}</div>
+                    <div class="notice-desc">${n.desc}</div>
+                `;
+                box.style.opacity = 1;
+                currentNoticeIndex = (currentNoticeIndex + 1) % notices.length;
+            }, 500);
+        }
+
+        setInterval(rotateNotice, 6000);
+        rotateNotice();
+
+        function updateClock() {
+            const now = new Date();
+            const clockEl = document.getElementById('clock');
+            if(clockEl) clockEl.innerText = now.toLocaleTimeString('ko-KR');
+        }
+        setInterval(updateClock, 1000);
+        updateClock();
+
+        async function fetchDashboardData() {
+            try {
+                const response = await fetch(API_URL);
+                if (!response.ok) throw new Error('Network response was not ok');
+                const sessions = await response.json();
+                renderDashboard(sessions);
+            } catch (error) {
+                console.error('데이터를 불러오지 못했습니다.', error);
+            }
+        }
+
+        function getSessionState(timeStr) {
+            if (!timeStr || !timeStr.includes('~')) return 'upcoming';
+            const parts = timeStr.split('~');
+            const [startH, startM] = parts[0].trim().split(':').map(Number);
+            const [endH, endM] = parts[1].trim().split(':').map(Number);
+
+            const now = new Date();
+            const currentTotalMin = now.getHours() * 60 + now.getMinutes();
+            const startTotalMin = startH * 60 + startM;
+            const endTotalMin = endH * 60 + endM;
+
+            if (currentTotalMin > endTotalMin) {
+                return 'ended';
+            } else if (currentTotalMin >= startTotalMin && currentTotalMin <= endTotalMin) {
+                return 'current';
+            } else {
+                return 'upcoming';
+            }
+        }
+
+        function renderDashboard(sessions) {
+            const container = document.getElementById('dashboard');
+            if(!container) return;
+            container.innerHTML = '';
+
+            let normalCardCount = 0;
+
+            sessions.forEach((s) => {
+                const remaining = s.max - s.current;
+                const isFull = remaining <= 0 && !s.isBreak;
+                const state = getSessionState(s.time);
+
+                let cardClass = 'card';
+                let statusHtml = '';
+                let badgeText = '';
+
+                if (s.isBreak) {
+                    cardClass += ' card-break';
+                    if (state === 'ended') {
+                        cardClass += ' ended';
+                        statusHtml = '정비 종료';
+                        badgeText = '이용 종료';
+                    } else {
+                        statusHtml = '점검·휴게';
+                        badgeText = state === 'current' ? '현재 정비 중' : '정비시간';
+                    }
+                } else {
+                    cardClass += ` card-s${normalCardCount}`;
+                    normalCardCount++;
+
+                    if (state === 'ended') {
+                        cardClass += ' ended';
+                        statusHtml = '이용 종료';
+                        badgeText = '마감됨';
+                    } else if (isFull) {
+                        cardClass += ' full';
+                        statusHtml = '예약 마감';
+                        badgeText = '만석';
+                    } else {
+                        statusHtml = `잔여 ${remaining}<span>명</span>`;
+                        badgeText = `현재 ${s.current} / 총 ${s.max}`;
+                    }
+                }
+
+                if (state === 'current') {
+                    cardClass += ' current';
+                    if (!s.isBreak) badgeText = '현재 진행 중';
+                }
+
+                container.innerHTML += `
+                    <div class="${cardClass}">
+                        <div class="session-title">${s.title}</div>
+                        <div class="session-time">${s.time}</div>
+                        <div class="session-status">${statusHtml}</div>
+                        <div class="badge">${badgeText}</div>
+                    </div>
+                `;
+            });
+        }
+
+        fetchDashboardData();
+        setInterval(fetchDashboardData, 5000);
+    </script>
+</body>
+</html>
